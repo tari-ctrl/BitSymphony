@@ -147,3 +147,62 @@
     (map-set UserPortfolios user new-portfolios)
     (ok true))
 )
+
+;; Initializes a new portfolio asset
+(define-private (initialize-portfolio-asset (index uint) (token principal) (percentage uint) (portfolio-id uint))
+    (if (>= percentage u0)
+        (begin
+            (map-set PortfolioAssets
+                {portfolio-id: portfolio-id, token-id: index}
+                {
+                    target-percentage: percentage,
+                    current-amount: u0,
+                    token-address: token
+                }
+            )
+            (ok true))
+        ERR-INVALID-TOKEN
+    )
+)
+
+(define-private (initialize-remaining-tokens 
+    (portfolio-id uint) 
+    (tokens (list 10 principal)) 
+    (percentages (list 10 uint))
+    (start-index uint))
+    (let (
+        (token-count (len tokens))
+    )
+    (if (>= start-index token-count)
+        (ok true)
+        (begin
+            (try! (initialize-portfolio-asset
+                start-index
+                (unwrap! (element-at tokens start-index) ERR-INVALID-TOKEN)
+                (unwrap! (element-at percentages start-index) ERR-INVALID-PERCENTAGE)
+                portfolio-id))
+            (initialize-remaining-tokens portfolio-id tokens percentages (+ start-index u1)))))
+)
+
+(define-private (initialize-additional-tokens 
+    (portfolio-id uint) 
+    (tokens (list 10 principal)) 
+    (percentages (list 10 uint))
+    (start-index uint)
+    (count uint))
+    (begin
+        (if (and (> count u0) (< start-index (len tokens)))
+            (begin
+                (try! (initialize-portfolio-asset
+                    start-index
+                    (unwrap! (element-at tokens start-index) ERR-INVALID-TOKEN)
+                    (unwrap! (element-at percentages start-index) ERR-INVALID-PERCENTAGE)
+                    portfolio-id))
+                (initialize-additional-tokens 
+                    portfolio-id 
+                    tokens 
+                    percentages 
+                    (+ start-index u1) 
+                    (- count u1)))
+            (ok true)))
+)
