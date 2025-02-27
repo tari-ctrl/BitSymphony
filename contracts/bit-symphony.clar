@@ -40,7 +40,7 @@
 
 ;; Domain Constants
 (define-constant MAX-TOKENS-PER-PORTFOLIO u10)       ;; Gas-optimized upper limit
-(define-constant BASIS-POINTS u10000)                /// 100% = 10,000 basis points
+(define-constant BASIS-POINTS u10000)                ;; 100% = 10,000 basis points
 
 ;; Core Data Structures
 (define-map Portfolios
@@ -165,7 +165,7 @@
     )
 )
 
-(define-private (initialize-remaining-tokens 
+(define-private (initialize-tokens 
     (portfolio-id uint) 
     (tokens (list 10 principal)) 
     (percentages (list 10 uint))
@@ -173,38 +173,14 @@
     (let (
         (token-count (len tokens))
     )
-    (if (>= start-index token-count)
-        (ok true)
-        (begin
-            (try! (initialize-portfolio-asset
-                start-index
-                (unwrap! (element-at tokens start-index) ERR-INVALID-TOKEN)
-                (unwrap! (element-at percentages start-index) ERR-INVALID-PERCENTAGE)
-                portfolio-id))
-            (initialize-remaining-tokens portfolio-id tokens percentages (+ start-index u1)))))
-)
-
-(define-private (initialize-additional-tokens 
-    (portfolio-id uint) 
-    (tokens (list 10 principal)) 
-    (percentages (list 10 uint))
-    (start-index uint)
-    (count uint))
-    (begin
-        (if (and (> count u0) (< start-index (len tokens)))
-            (begin
-                (try! (initialize-portfolio-asset
-                    start-index
-                    (unwrap! (element-at tokens start-index) ERR-INVALID-TOKEN)
-                    (unwrap! (element-at percentages start-index) ERR-INVALID-PERCENTAGE)
-                    portfolio-id))
-                (initialize-additional-tokens 
-                    portfolio-id 
-                    tokens 
-                    percentages 
-                    (+ start-index u1) 
-                    (- count u1)))
-            (ok true)))
+    (for ((index start-index) (<= index (- token-count u1)) (index (+ index u1)))
+        (try! (initialize-portfolio-asset
+            index
+            (unwrap! (element-at tokens index) ERR-INVALID-TOKEN)
+            (unwrap! (element-at percentages index) ERR-INVALID-PERCENTAGE)
+            portfolio-id))
+    )
+    (ok true))
 )
 
 ;; Public Functions
@@ -272,7 +248,6 @@
     (map-set Portfolios portfolio-id
         (merge portfolio {last-rebalanced: block-height})
     )
-    
     (ok true))
 )
 
